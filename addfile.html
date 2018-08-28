@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?var url = getScriptUrl();?><a href='<?=url?>?page=search'>Search Catalogue</a>
+    <?var url = getScriptUrl();?><a style="border-style:solid" href='<?=url?>?page=addfile'>Add File</a>
+    <?var url = getScriptUrl();?><a href='<?=url?>?page=cabinets'>Manage Cabinets</a>
+  </head>
+  <body>
+  <br />
+  <br />
+  <br />
+  <table style="padding-left:50px;">
+   <tr>
+    <td style="padding-bottom:20px;padding-right:20px;height:130px;">
+     <div style="color:blue;"><b>Cabinets</b></div>
+     <select id="dropDownCabinets" onchange="selFiles()" style="background-color:#FFFFCC;width:250px;">
+     </select>
+     <br />
+     <div style="color:blue;padding-bottom:20px;"><b>Empty Files (available for re-use)</b>
+      <select id="dropDownFiles" style="background-color:#FFFFCC;width:50px;">
+      </select>
+     </div>
+    </td>
+    <td>
+     <button type="button" style="" onclick="useEmpty()">Use</button>
+    </td>
+    <td id="editForm" style="padding-left:50px;padding-bottom:20px;">
+      <div id="detailHeader" style="color:blue;visibility:hidden;"><b>File Details</b></div>
+      <table id='fileDets'>
+      </table>
+    </td>
+   </tr>
+   <tr>
+     <td> </td>
+     <td style="padding-top:30px;">
+      <button type="button" onclick="addFile()">Add New File</button>
+     </td>
+   </tr>
+  </table>
+<script>
+var cabinetData;
+/** optionsBar & selBar are used to create options bar for cabinets **/
+function optionsBar() {
+  var fragment = document.createDocumentFragment();
+            
+  for(var i = 0 ; i< cabinetData.length; i++)
+  {
+    var opt = document.createElement('option');
+    opt.innerHTML = cabinetData[i][1];
+    opt.value = cabinetData[i][0];
+    fragment.appendChild(opt);
+  }
+  return fragment;
+}
+
+function selBar(data) {
+  cabinetData = data;
+  var sel = document.getElementById('dropDownCabinets');
+  sel.appendChild(optionsBar());
+}
+google.script.run.withSuccessHandler(selBar)
+.getCabinets();
+
+
+function addTheFiles(files) {
+  var ddFiles = document.getElementById('dropDownFiles');
+  var fragment = document.createDocumentFragment();
+  for(var i = 0; i<files.length ;i++)
+  {
+    var opt = document.createElement('option');
+    opt.innerHTML = files[i][1];
+    opt.value = files[i][0];
+    fragment.appendChild(opt);
+  }
+  for(var j = ddFiles.options.length - 1 ; j >= 0 ; j--)
+  {
+    ddFiles.remove(j);
+  }
+  ddFiles.appendChild(fragment);
+}
+google.script.run.withSuccessHandler(addTheFiles)
+  .getEmptyFiles("1");
+
+
+function selFiles() {
+  var ddCabinets = document.getElementById('dropDownCabinets');
+  var cabNum = ddCabinets.selectedIndex+1;
+  google.script.run.withSuccessHandler(addTheFiles)
+  .getEmptyFiles(cabNum);
+}
+
+function useEmpty()
+{
+  var ddCab = document.getElementById('dropDownCabinets');
+  var ddFil = document.getElementById('dropDownFiles');
+  
+  var selCab = ddCab.selectedIndex;
+  var selFil = ddFil.selectedIndex;
+  
+  createFileDetails(ddFil.options[selFil].value, ddFil.options[selFil].text, ddCab.options[selCab].value, 'EMPTY FILE', false);
+
+}
+
+
+/** This creates and destroys the interface to edit/add files **/
+function createFileDetails(index, number, cabinet, description, isNew)
+{
+  
+  var table = document.getElementById('fileDets');
+  if(table.tBodies.length > 0) {
+    table.removeChild(table.getElementsByTagName('tbody')[0]);
+    table.removeChild(table.getElementsByTagName('tfoot')[0]);
+  }
+  
+  var tablebody = document.createElement('tbody');
+  
+  var r1 = document.createElement('tr');
+  var num = document.createElement('td');
+  num.appendChild(document.createTextNode("Number"));
+  r1.appendChild(num);
+  var numTd = document.createElement('td');
+  var inputtonumber = document.createElement('input');
+  inputtonumber.size = "4";
+  if(isNew)
+    numTd.appendChild(inputtonumber);
+  else {
+    var textNode = document.createTextNode(number);
+    numTd.appendChild(textNode);
+  }
+  r1.appendChild(numTd);
+  
+  var r2 = document.createElement('tr');
+  var cab = document.createElement('td');
+  cab.appendChild(document.createTextNode("Cabinet"));
+  r2.appendChild(cab);
+  var selTd = document.createElement('td');
+  var select = document.createElement('select');
+  select.appendChild(optionsBar());
+  select.selectedIndex = cabinet-1;
+  selTd.appendChild(select);
+  r2.appendChild(selTd);
+  
+  
+  var r3 = document.createElement('tr');
+  var desc = document.createElement('td');
+  desc.appendChild(document.createTextNode("Description"));
+  r3.appendChild(desc);
+  var descTd = document.createElement('td');
+  var descinput = document.createElement('input');
+  descinput.size = "60";
+  descinput.value = description;
+  descTd.appendChild(descinput);
+  r3.appendChild(descTd);
+  
+  var footer = table.createTFoot();
+  var footerRow = footer.insertRow(0);
+  var footerCell = footerRow.insertCell(0);
+  
+  var cancel = document.createElement('button');
+  cancel.appendChild(document.createTextNode('Cancel'));
+  cancel.onclick = function() {
+    table.removeChild(table.getElementsByTagName('tbody')[0]);
+    table.removeChild(table.getElementsByTagName('tfoot')[0]);
+    var header = document.getElementById("detailHeader");
+    header.style.visibility = "hidden";
+  };
+  
+  var update = document.createElement('button');
+  if(isNew) update.appendChild(document.createTextNode('Add'));
+  else update.appendChild(document.createTextNode('Update'));
+  update.onclick = function() {
+    var update_cabinet = select.selectedIndex+1;
+    var update_description = descinput.value;
+    var update_number;
+    if(isNew) {
+      update_number = inputtonumber.value;
+      google.script.run.addNewFile(update_number, update_cabinet, update_description);
+    }
+    else {
+      var numTd_update = (r1.cells)[1];
+      update_number = numTd_update.textContent;
+      google.script.run.editFile(index, update_cabinet, update_description);
+    }
+    
+    r1.deleteCell(1);
+    var update_numberTd = r1.insertCell(1);
+    update_numberTd.appendChild(document.createTextNode(update_number));
+    selTd.removeChild(selTd.children[0]);
+    selTd.appendChild(document.createTextNode(update_cabinet));
+    descTd.removeChild(descTd.children[0]);
+    descTd.appendChild(document.createTextNode(update_description));
+    
+    footerRow.deleteCell(0);
+    var newFooterCell = footerRow.insertCell(0);
+    var edit = document.createElement('button');
+    edit.appendChild(document.createTextNode('Edit'));
+    edit.onclick = function() {
+      createFileDetails(index, update_number, update_cabinet, update_description, false);
+    }
+    newFooterCell.appendChild(edit);
+    newFooterCell.appendChild(cancel);
+  };
+  
+  footerCell.appendChild(update);
+  footerCell.appendChild(cancel);
+  
+  tablebody.appendChild(r1);
+  tablebody.appendChild(r2);
+  tablebody.appendChild(r3);
+  
+  var header = document.getElementById("detailHeader");
+  header.style.visibility = "visible";
+  table.appendChild(tablebody);
+  
+}
+
+/** onclick to show add file interface */
+function addFile() {
+  createFileDetails(0, "420", "1", "", true);
+  
+}
+   </script>
+   <style>
+body,html {
+  background:#ECEDF1;
+  max-width: 1500px; 
+  margin:0 auto;
+  font-family: sans-serif;
+}
+
+ul {
+  padding: 0;
+  width: 100%;
+}
+
+li {
+  display: inline;
+}
+
+a {
+  outline: none;
+  text-decoration: none;
+  display: inline-block;
+  width: 32%;
+  margin-right: 0.625%;
+  text-align: center;
+  line-height: 3;
+  color: black;
+}
+
+li:last-child a {
+  margin-right: 0;
+}
+
+a:link, a:visited, a:focus {
+  background: #FFFFCC;
+}
+
+a:hover {     
+  background: orange;
+}
+
+a:active {
+  background: red;
+  color: white;
+}
+  </style>
+  </body>
+</html>

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?var url = getScriptUrl();?><a style="border-style:solid" href='<?=url?>?page=search'>Search Catalogue</a>
+    <?var url = getScriptUrl();?><a href='<?=url?>?page=addfile'>Add File</a>
+    <?var url = getScriptUrl();?><a href='<?=url?>?page=cabinets'>Manage Cabinets</a>
+  </head>
+  <body>
+    <br />
+    <br />
+    <br />
+    <form onsubmit="sendText(event)">
+     <table style="margin-left:auto;margin-right:auto">
+      <tr>
+       <td>
+      Cabinet :
+      <select id='selectCabinets' style="background-color:#FFFFCC;width:250px;">
+        <option value='all'>All Cabinets</option>
+      </select>
+        </td>
+        <td>
+      File Number / Description :
+      <input type="text" name="search-querey" style="background-color:#FFFFCC;width:250px;"/>
+        </td>
+        <td>
+      <input type="submit" value="search" />
+        <td>
+       </tr>
+       <tr>
+        <td>&nbsp;</td>
+        <td align="left" style="position:relative; left:40;">
+         <b>Search for:</b><br />
+            &nbsp;&nbsp;<input id="ctl00_ContentPlaceHolder1_RadioButton1" type="radio" 
+              name="ctl00$ContentPlaceHolder1$searchOptions" value="RadioButton1" checked="checked" /> all words (AND)<br/>
+            &nbsp;&nbsp;<input id="ctl00_ContentPlaceHolder1_RadioButton2" type="radio" 
+              name="ctl00$ContentPlaceHolder1$searchOptions" value="RadioButton2" /> at least one word (OR)<br/>
+        </td>
+       </tr>
+      </table>
+    </form>
+    <br />
+    <br />
+    <table border="1" id="searchOutput" style="border-collapse:collapse;margin-left:auto;margin-right:auto"></table>
+    
+    <script>
+var cabinetData;
+
+/** this is for the options bar at the top **/
+function optionsBar(data)
+{
+  cabinetData = data;
+  var sel = document.getElementById('selectCabinets');
+  var fragment = document.createDocumentFragment();
+            
+  for(var i = 0 ; i< data.length; i++)
+  {
+      var opt = document.createElement('option');
+      opt.innerHTML = data[i][1];
+      opt.value = data[i][0];
+      fragment.appendChild(opt);
+   }
+   sel.appendChild(fragment);
+}
+google.script.run.withSuccessHandler(optionsBar)
+  .getCabinets();
+
+
+
+/** when search button clicked, sends input to be searched **/
+function sendText(e) 
+{
+  e.preventDefault();
+      
+  var data = {
+    cabinetNumber: e.target['selectCabinets'].value,
+    searchQuerey: e.target['search-querey'].value,
+    AND: document.getElementById('ctl00_ContentPlaceHolder1_RadioButton1').checked
+  }
+      
+  google.script.run
+    .withSuccessHandler(function(response) {
+      createTable(response, data.searchQuerey, data.cabinetNumber, data.AND);
+    })
+  .searchInput(data);
+}
+
+
+/** Creates the table from search results **/
+function createTable(tableData, searchQuerey, searchCabNum, isAND) {
+  
+  
+  var qr_array = searchQuerey.split(" ");
+  var table = document.getElementById('searchOutput');
+  if(table.tBodies.length > 0) {
+    table.removeChild(table.getElementsByTagName('tbody')[0]);
+  }
+  var tableBody = document.createElement('tbody');
+      
+  if(tableData.length == 0) {
+    tableBody.appendChild(document.createElement('tr').appendChild(document.createElement('td')
+      .appendChild(document.createTextNode('No files match your query!'))));
+    table.style.border = "0 dotted red";
+  }
+        
+  else {
+    // Header creation.
+    var header = document.createElement('tr');
+    var empty = document.createElement('td');
+    empty.appendChild(document.createTextNode(''));
+    header.appendChild(empty);
+    var fil = document.createElement('td');
+    fil.appendChild(document.createTextNode("Number"));
+    header.appendChild(fil);
+    var cab = document.createElement('td');
+    cab.appendChild(document.createTextNode("Cabinet"));
+    header.appendChild(cab);
+    var desc = document.createElement('td');
+    desc.appendChild(document.createTextNode("Description"));
+    header.appendChild(desc);
+    var recyc = document.createElement('td');
+    //recyc.appendChild(document.createTextNode("Recycle File"));
+    header.appendChild(recyc);
+    header.style.color = "white";
+    header.style.backgroundColor = "#A9A9A9";
+    header.style.fontWeight = "bold";
+    header.style.textAlign = "center";
+    tableBody.appendChild(header);
+    
+    /** Add all of the rows with data to table **/
+    var tern = true;
+    tableData.forEach(function(rowData) {
+     
+      var row = document.createElement('tr');
+      
+      // Create the EDIT button
+      var b = document.createElement('button');
+      b.style.color = 'blue';
+      var t = document.createTextNode('Edit');
+      var c = document.createElement('td');
+      b.appendChild(t);
+      b.setAttribute("align", "center");
+      b.onclick = function() 
+      {
+        // Change the cabinet
+        var cabinetText;
+        var cabinetIndex;
+        function optionBar()
+        {
+          cabinetText = row.cells[2].textContent;
+          row.deleteCell(2);
+          var cabinetCellOptionBar = row.insertCell(2);
+          var sel = document.createElement('select');
+          var fragment = document.createDocumentFragment();
+        
+          for(var i = 0 ; i< cabinetData.length; i++)
+          {
+            var opt = document.createElement('option');
+            opt.innerHTML = cabinetData[i][1];
+            if(cabinetData[i][0] == cabinetText) cabinetIndex = i;
+            opt.value = cabinetData[i][0];
+            fragment.appendChild(opt);
+          }
+        
+          sel.appendChild(fragment);
+          sel.selectedIndex = cabinetIndex;
+          cabinetCellOptionBar.appendChild(sel);
+        }
+        optionBar();
+        
+        // Change the description
+        var desc = ((row.cells)[3]).textContent;
+        var search = document.createElement('input');
+        search.setAttribute("type", "text");
+        search.value = desc;
+        search.size = desc.length;
+        row.deleteCell(3);
+        var searchtd = row.insertCell(3);
+        searchtd.appendChild(search);
+        
+        row.deleteCell(0);
+        var cellb = row.insertCell(0);
+        var update = document.createElement('button');
+        update.appendChild(document.createTextNode('Update'));
+        update.onclick = function() {
+          var str_desc = row.cells[3].children[0].value;
+          var cab_number_x = row.cells[0].children[0].value;
+          
+          google.script.run
+          .withSuccessHandler(function(response) {
+            if(response == true)
+            {
+              cabinetIndex = row.cells[2].children[0].selectedIndex;
+              desc = str_desc;
+              updateTheRow();
+            }
+            else table.deleteRow(row.rowIndex);
+            
+            google.script.run.editFile(rowData[0], cabinetData[cabinetIndex][0], str_desc);
+          })
+          .searchAFile([cab_number_x, cabinetText, 0, 0, str_desc], qr_array, searchCabNum, isAND, (searchCabNum == 'all'));
+          
+        };
+        var cancel = document.createElement('button');
+        cancel.appendChild(document.createTextNode('Cancel'));
+        cancel.onclick = function() {
+          updateTheRow()
+        };
+        // Change row from update/cancel
+        function updateTheRow() {
+          row.deleteCell(0);
+          var cellapp = row.insertCell(0);
+          cellapp.appendChild(b);
+          
+          row.deleteCell(2);
+          var cabapp = row.insertCell(2);
+          var cabspanc = document.createElement('span');
+          cabspanc.title = cabinetData[cabinetIndex][1];
+          cabspanc.appendChild(document.createTextNode(cabinetData[cabinetIndex][0]));
+          cabapp.appendChild(cabspanc);
+          
+          row.deleteCell(3);
+          var descapp = row.insertCell(3);
+          descapp.appendChild(document.createTextNode(desc));
+        }
+        cellb.appendChild(update);
+        cellb.appendChild(cancel);
+      };
+      c.appendChild(b);
+      row.appendChild(c);
+      
+  
+      // Add file number to table
+      var cellNumber = document.createElement('td');
+      cellNumber.appendChild(document.createTextNode(rowData[1]));
+      row.appendChild(cellNumber);
+      
+      // Add cabinet number to table
+      var cellCabinet = document.createElement('td');
+      var spanCabinet = document.createElement('span');
+      spanCabinet.title = cabinetData[rowData[2]-1][1];
+      spanCabinet.appendChild(document.createTextNode(rowData[2]));
+      cellCabinet.appendChild(spanCabinet);
+      row.appendChild(cellCabinet);
+      
+      // Add description to table
+      var cellDescription = document.createElement('td');
+      cellDescription.appendChild(document.createTextNode(rowData[3]));
+      row.appendChild(cellDescription);
+      
+      // Add the recycle button
+      var recycell = document.createElement('td');
+      var recybutton = document.createElement('button');
+      recybutton.appendChild(document.createTextNode('Recycle'));
+      recybutton.onclick = function() {
+        if(confirm('Are you sure you want to recycle this file data?')) {
+          var EMPTY = 'EMPTY FILE';
+          var r_cabinetText = (row.cells)[2].textContent;
+          
+          google.script.run
+          .withSuccessHandler(function(response) {
+            if(response == true)
+            {
+              row.deleteCell(3);
+              var descCell = row.insertCell(3);
+              descCell.appendChild(document.createTextNode(EMPTY));
+            }
+            else table.deleteRow(row.rowIndex);
+            
+            google.script.run.editFile(rowData[0], r_cabinetText, EMPTY);
+          })
+          .searchAFile([(row.cells)[1].textContent, r_cabinetText, 0, 0, EMPTY], qr_array, searchCabNum, isAND, (searchCabNum == 'all'));
+        }
+      };
+      recybutton.setAttribute("align", "center");
+      recycell.appendChild(recybutton);
+      row.appendChild(recycell);
+      
+ 
+      // Iterative styling
+      if(tern) {
+        row.style.backgroundColor = "lightyellow";
+        tern = false;
+      }
+      else
+        tern = true;
+      
+      tableBody.appendChild(row);
+    }); // end for loop over rows
+    
+    tableBody.style.border = "thin solid #000000";
+  }
+  table.style.padding = "20px 10px 20px 10px";
+  table.style.background ="white";
+  table.appendChild(tableBody);
+  document.body.appendChild(table);
+}
+    
+    </script>
+    <style>
+body,html {
+  background:#ECEDF1;
+  max-width: 1500px; 
+  margin:0 auto;
+  font-family: sans-serif;
+}
+
+ul {
+  padding: 0;
+  width: 100%;
+}
+
+li {
+  display: inline;
+}
+
+a {
+  outline: none;
+  text-decoration: none;
+  display: inline-block;
+  width: 32%;
+  margin-right: 0.625%;
+  text-align: center;
+  line-height: 3;
+  color: black;
+}
+
+li:last-child a {
+  margin-right: 0;
+}
+
+a:link, a:visited, a:focus {
+  background: #FFFFCC;
+}
+
+a:hover {     
+  background: orange;
+}
+
+a:active {
+  background: red;
+  color: white;
+}
+  </style>
+  </body>
+</html>

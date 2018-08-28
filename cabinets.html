@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?var url = getScriptUrl();?><a href='<?=url?>?page=search'>Search Catalogue</a>
+    <?var url = getScriptUrl();?><a href='<?=url?>?page=addfile'>Add File</a>
+    <?var url = getScriptUrl();?><a style="border-style:solid" href='<?=url?>?page=cabinets'>Manage Cabinets</a>
+  </head>
+  <body>
+  <br />
+  <br />
+  <table id="cabinets" style="margin-left:auto;margin-right:auto;width:80%;text-align:center">
+    <tr>
+      <th>id</th>
+      <th>name</th>
+      <th>description</th>
+      <th></th>
+    </tr>
+  </table>
+  <br />
+  <div class="wrapper" style="text-align:center;">
+  <button type="button" onclick="newCabinet()">New Cabinet</button>
+  </div>
+  <br />
+  <br />
+  <table id="editCabinets" style="margin-left:auto;margin-right:auto;width:80%;text-align:left;padding-left:10px;">
+  </table>
+  <script>
+
+var cabinets;
+google.script.run
+.withSuccessHandler(function(response) {
+  cabinets = response;
+  var cabTable = document.getElementById('cabinets');
+  var table = document.createElement('tbody');
+  
+  cabinets.forEach(function(rowData)
+  {
+    var row = document.createElement('tr');
+    for(var j = 0; j < rowData.length ; j++)
+    {
+      var square = document.createElement('td');
+      square.appendChild(document.createTextNode(rowData[j]));
+      if(j==2) {square.style.textAlign = "left";
+        square.style.paddingLeft = "5px";
+        }
+      row.appendChild(square);
+    }
+    var select = document.createElement('button');
+    select.appendChild(document.createTextNode('select'));
+    select.onclick = function() {
+      cabinetEditor(rowData[0], rowData[1], rowData[2], false);
+    }
+    row.appendChild(select);
+    table.appendChild(row);
+  });
+  cabTable.appendChild(table);
+})
+.getCabinets();
+
+
+function  cabinetEditor(cab_id, cab_name, cab_description, isNew)
+{
+  var table = document.getElementById('editCabinets');
+  if(table.tBodies.length > 0) {
+    table.removeChild(table.getElementsByTagName('tbody')[0]);
+  }
+  var tableBody = document.createElement('tbody');
+  
+  var r1 = document.createElement('tr');
+  var idTd = document.createElement('td');
+  idTd.appendChild(document.createTextNode('id'));
+  idTd.style.width = "20%";
+  idTd.style.textAlign = "center";
+  idTd.style.height = "30px";
+  var id = document.createElement('td');
+  id.appendChild(document.createTextNode(cab_id));
+  r1.appendChild(idTd);
+  r1.appendChild(id);
+  
+  var r2 = document.createElement('tr');
+  var nameTd = document.createElement('td');
+  nameTd.appendChild(document.createTextNode('name'));
+  nameTd.style.width = "20%";
+  nameTd.style.textAlign = "center";
+  nameTd.style.height = "30px";
+  var name = document.createElement('td');
+  name.appendChild(document.createTextNode(cab_name));
+  r2.appendChild(nameTd);
+  r2.appendChild(name);
+  
+  var r3 = document.createElement('tr');
+  var descTd = document.createElement('td');
+  descTd.appendChild(document.createTextNode('description'));
+  descTd.style.width = "20%";
+  descTd.style.textAlign = "center";
+  descTd.style.height = "30px";
+  var desc = document.createElement('td');
+  desc.appendChild(document.createTextNode(cab_description));
+  r3.appendChild(descTd);
+  r3.appendChild(desc);
+  
+  var editing = false;
+  var r4 = document.createElement('tr');
+  var emptyTd = document.createElement('td');
+  r4.appendChild(emptyTd);
+  var buttons = document.createElement('td');
+  var b1 = document.createElement('button');
+  b1.appendChild(document.createTextNode('Edit'));
+  b1.style.display = "inline";
+  b1.style.float = "right";
+  var b2 = document.createElement('button');
+  b2.appendChild(document.createTextNode('Delete'));
+  b2.style.display = "inline";
+  b2.style.float = "right";
+  var b3 = document.createElement('button');
+  b3.appendChild(document.createTextNode('Cancel'));
+  b3.style.display = "inline";
+  b3.style.float = "right";
+  
+  b1.onclick = function() {
+    editing = true;
+    var nameinput = document.createElement('input');
+    nameinput.style.width = "75%";
+    nameinput.value = cab_name;
+    name.removeChild(name.childNodes[0]);
+    name.appendChild(nameinput);
+    var descinput = document.createElement('input');
+    descinput.style.width = "75%";
+    descinput.value = cab_description;
+    desc.removeChild(desc.childNodes[0]);
+    desc.appendChild(descinput);
+    // Now to change buttons:
+    b1.style.display = "none";
+    b2.removeChild(b2.childNodes[0]);
+    b2.appendChild(document.createTextNode('Save'));
+    b3.removeChild(b3.childNodes[0]);
+    if(isNew)
+      b3.appendChild(document.createTextNode('Cancel'));
+    else
+      b3.appendChild(document.createTextNode('Back'));
+  }
+  b2.onclick = function() {
+    if(editing) {
+      
+    }
+    else {
+      confirm('Are you sure you want to delete this cabinet?');
+    }
+  }
+  b3.onclick = function() {
+    if(editing) {
+    
+    }
+    else {
+      table
+    }
+  
+  }
+  
+  buttons.appendChild(b3);
+  buttons.appendChild(b2);
+  buttons.appendChild(b1);
+  r4.appendChild(buttons);
+  
+  tableBody.appendChild(r1);
+  tableBody.appendChild(r2);
+  tableBody.appendChild(r3);
+  tableBody.appendChild(r4);
+  if(isNew) b1.click();
+  table.appendChild(tableBody);
+}
+
+function newCabinet() {
+  cabinetEditor(cabinets.length+1,"","",true);
+}
+  
+
+  </script>
+    <style>
+body,html {
+  background:#ECEDF1;
+  max-width: 1500px; 
+  margin:0 auto;
+  font-family: sans-serif;
+}
+table {
+   border: 1px solid black;
+   border-collapse:collapse;
+}
+tr { border: none; }
+td {
+  border-right: solid 1px #000; 
+}
+tr:nth-child(even) {background-color: #f2f2f2;}
+th {
+  height:40px;
+  background-color: blue;
+  color: white;
+}
+
+button{
+  margin:auto;
+  display:block;
+}
+
+/* BUTTON STYLES */
+button{
+  padding:6px 12px;
+  font-family:helvetica;
+  font-size:16px;
+  font-weight:100;
+  color:#fff;
+  background: #587286;s
+  font-weight:100;
+}
+button:hover{
+  background: #3B5C76;
+}
+
+ul {
+  padding: 0;
+  width: 100%;
+}
+
+li {
+  display: inline;
+}
+
+a {
+  outline: none;
+  text-decoration: none;
+  display: inline-block;
+  width: 32%;
+  margin-right: 0.65%;
+  text-align: center;
+  line-height: 3;
+  color: black;
+}
+
+li:last-child a {
+  margin-right: 0;
+}
+
+a:link, a:visited, a:focus {
+  background: #FFFFCC;
+}
+
+a:hover {     
+  background: orange;
+}
+
+a:active {
+  background: red;
+  color: white;
+}
+  </style>
+  </body>
+</html>
